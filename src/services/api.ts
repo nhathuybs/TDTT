@@ -1,5 +1,4 @@
-// API Configuration
-const API_BASE_URL = 'https://smart-travel-backend-85676926926.asia-southeast1.run.app';
+import { API_URL } from "./config";
 
 // Types matching backend API response
 export interface ApiRestaurant {
@@ -117,7 +116,7 @@ function formatOpenTime(openTime?: string, closeTime?: string): string {
 // API Functions
 export async function fetchRestaurants(limit: number = 100, page: number = 1): Promise<Restaurant[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/restaurants?limit=${limit}&page=${page}`);
+    const response = await fetch(`${API_URL}/restaurants?limit=${limit}&page=${page}`);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -137,7 +136,7 @@ export async function fetchRestaurants(limit: number = 100, page: number = 1): P
 
 export async function fetchRestaurantById(id: string): Promise<Restaurant | null> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/restaurants/${id}`);
+    const response = await fetch(`${API_URL}/restaurants/${id}`);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -153,9 +152,27 @@ export async function fetchRestaurantById(id: string): Promise<Restaurant | null
   }
 }
 
+export async function getNewestRestaurants(): Promise<Restaurant[]> {
+  try {
+    const response = await fetch(`${API_URL}/restaurants/newest`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const result: ApiResponse<ApiRestaurant[]> = await response.json();
+    
+    if (result.success && Array.isArray(result.data)) {
+      return result.data.map(mapApiRestaurantToFrontend);
+    }
+    return [];
+  } catch (error) {
+    console.error('Error fetching newest restaurants:', error);
+    return [];
+  }
+}
+
 export async function fetchRestaurantReviews(restaurantId: string): Promise<ApiReview[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/reviews/restaurant/${restaurantId}`);
+    const response = await fetch(`${API_URL}/reviews/restaurant/${restaurantId}`);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -173,7 +190,7 @@ export async function fetchRestaurantReviews(restaurantId: string): Promise<ApiR
 
 export async function searchRestaurants(query: string): Promise<Restaurant[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/restaurants/search?q=${encodeURIComponent(query)}`);
+    const response = await fetch(`${API_URL}/restaurants/search?q=${encodeURIComponent(query)}`);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }

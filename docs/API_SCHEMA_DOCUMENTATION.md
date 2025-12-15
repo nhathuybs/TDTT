@@ -169,10 +169,12 @@ interface PaginationMeta {
 | Method | Endpoint | Request Type | Response Type |
 |--------|----------|--------------|---------------|
 | POST | `/api/auth/login` | `LoginRequest` | `LoginResponse` |
-| POST | `/api/auth/register` | `RegisterRequest` | `RegisterResponse` |
+| POST | `/api/auth/register/start` | `RegisterStartRequest` | `{ email: string }` |
+| POST | `/api/auth/register/verify` | `RegisterVerifyRequest` | `LoginResponse` |
 | POST | `/api/auth/refresh` | `RefreshTokenRequest` | `RefreshTokenResponse` |
 | POST | `/api/auth/logout` | `LogoutRequest` | `void` |
 | POST | `/api/auth/forgot-password` | `{ email: string }` | `{ message: string }` |
+| POST | `/api/auth/reset-password` | `{ email: string; otp: string; new_password: string; confirm_password: string }` | `{ message: string }` |
 
 ### 5.2 Restaurant APIs
 
@@ -234,7 +236,7 @@ const API_ERROR_CODES = {
   AUTH_TOKEN_INVALID: 'E1003',         // Token không hợp lệ
   AUTH_UNAUTHORIZED: 'E1004',          // Chưa đăng nhập
   AUTH_EMAIL_EXISTS: 'E1005',          // Email đã tồn tại
-  AUTH_EMAIL_NOT_VERIFIED: 'E1006',    // Email chưa xác thực
+  AUTH_EMAIL_NOT_VERIFIED: 'E1007',    // Email chưa xác thực
   
   // ✅ Validation Errors (2xxx)
   VALIDATION_ERROR: 'E2001',           // Lỗi validation chung
@@ -565,7 +567,9 @@ export function useAuth() {
 
 Tạo file `.env` tại root:
 ```env
-VITE_API_BASE_URL=http://localhost:8000/api
+# Can be backend root or backend /api prefix (both supported)
+VITE_API_BASE_URL=http://localhost:8000
+# VITE_API_BASE_URL=http://localhost:8000/api
 ```
 
 ### Cần cài thêm (optional)
@@ -586,4 +590,3 @@ npm install @tanstack/react-query
 > **📌 Lưu ý:** File này nên được cập nhật khi có thay đổi về API schema.
 
 ---
-
