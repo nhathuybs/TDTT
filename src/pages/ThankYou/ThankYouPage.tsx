@@ -10,7 +10,7 @@ interface ThankYouPageProps {
 
 export function ThankYouPage({ onNavigateHome, onNavigateBookings, onNavigateChatbot }: ThankYouPageProps) {
   return (
-    <div className="min-h-screen relative flex items-center justify-center p-4">
+    <div className="min-h-app relative flex items-center justify-center p-4">
       <Card
         className="max-w-2xl w-full bg-gradient-to-br from-pink-100/90 via-rose-100/90 to-fuchsia-100/90 backdrop-blur-xl border-2 border-pink-200 rounded-3xl p-8 md:p-12 shadow-2xl text-center"
         style={{ boxShadow: "0 0 40px rgba(255,182,193,0.5)" }}

@@ -1,11 +1,12 @@
 import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
-import { UtensilsCrossed, Search, Calendar, MessageCircle, Star } from "lucide-react";
+import { UtensilsCrossed, Search, Globe, MessageCircle, Star } from "lucide-react";
 import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
 
 interface HomePageProps {
   onNavigateToRestaurants: () => void;
+  onNavigateToChatbot: () => void;
 }
 
 const featuredDishes = [
@@ -33,23 +34,23 @@ const features = [
     description: "Tìm nhà hàng phù hợp với sở thích và ngân sách của bạn",
   },
   {
-    icon: Calendar,
-    title: "Đặt bàn nhanh chóng",
-    description: "Đặt bàn trực tuyến chỉ trong vài phút",
-  },
-  {
     icon: MessageCircle,
     title: "Chatbot AI hỗ trợ",
-    description: "Nhận gợi ý món ăn từ trợ lý AI thông minh",
+    description: "Mô hình hóa trợ lý cá nhân, người bạn đồng hành trong lĩnh vực ẩm thực",
   },
   {
     icon: Star,
     title: "Đánh giá chính xác",
-    description: "Xem đánh giá từ thực khách để chọn nhà hàng tốt nhất",
+    description: "Nói không với seeding, đảm bảo đánh giá khách quan và trung thực",
   },
+  {
+    icon: Globe, 
+    title: "Thấu hiểu ngôn ngữ",
+    description: "Xóa bỏ rào cản ngôn ngữ cho du khách với khả năng dịch thuật và giải thích văn hóa ẩm thực Việt tự động.",
+  }
 ];
 
-export function HomePage({ onNavigateToRestaurants }: HomePageProps) {
+export function HomePage({ onNavigateToRestaurants, onNavigateToChatbot }: HomePageProps) {
   return (
     <div className="min-h-screen relative overflow-auto">
       <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-12 pb-24">
@@ -70,30 +71,32 @@ export function HomePage({ onNavigateToRestaurants }: HomePageProps) {
 
           <div className="space-y-4">
             <h1 className="bg-gradient-to-r from-pink-600 via-rose-600 to-fuchsia-600 bg-clip-text text-transparent drop-shadow-[0_2px_8px_rgba(255,182,193,0.4)]">
-              🍜 Cosmic Vietnamese Food Galaxy 🥢
+              🍜 Food Journey Assistant 🥢
             </h1>
-            <p className="text-pink-700 max-w-2xl mx-auto text-lg">
-              Khám phá và đặt bàn tại các nhà hàng Việt Nam tuyệt vời nhất. 
-              Trải nghiệm ẩm thực đích thực với sự hỗ trợ của AI thông minh!
+            <p className="text-pink-700 text-lg max-w-3xl mx-auto">
+              Hơn cả một bữa ăn, chúng tôi kể câu chuyện văn hóa qua lăng kính công nghệ
+              <br />
+              Để mỗi gợi ý đều là một "viên ngọc ẩn" dành riêng cho bạn 
             </p>
           </div>
 
           <div className="flex flex-wrap gap-4 justify-center">
             <Button
               onClick={onNavigateToRestaurants}
-              className="bg-gradient-to-r from-pink-400 to-rose-400 hover:from-pink-500 hover:to-rose-500 text-white rounded-2xl px-8 py-6 shadow-xl"
+              className="bg-gradient-to-r from-pink-400 to-rose-400 hover:from-pink-500 hover:to-rose-500 text-white rounded-2xl px-8 py-6 shadow-xl font-bold"
               style={{ boxShadow: "0 0 30px rgba(255,182,193,0.6)" }}
             >
-              <Search className="mr-2 h-5 w-5" />
-              Khám phá nhà hàng
+              <Search className="h-5 w-5" />
+              KHÁM PHÁ NHÀ HÀNG
             </Button>
             <Button
               variant="outline"
-              className="bg-white/80 backdrop-blur-lg border-2 border-pink-300 hover:bg-pink-100 text-pink-700 rounded-2xl px-8 py-6 shadow-lg"
+              onClick={onNavigateToChatbot}
+              className="bg-white/80 backdrop-blur-lg border-2 border-pink-300 hover:bg-pink-100 text-pink-700 rounded-2xl px-8 py-6 shadow-lg font-bold"
               style={{ boxShadow: "0 0 20px rgba(255,182,193,0.4)" }}
             >
-              <MessageCircle className="mr-2 h-5 w-5" />
-              Hỏi AI ngay
+              <MessageCircle className="h-5 w-5" />
+              TRÒ CHUYỆN CÙNG AI
             </Button>
           </div>
         </div>
@@ -101,7 +104,7 @@ export function HomePage({ onNavigateToRestaurants }: HomePageProps) {
         {/* Featured Dishes */}
         <div className="space-y-6">
           <div className="text-center">
-            <h2 className="text-pink-800 mb-2">✨ Món ăn nổi bật ✨</h2>
+            <h2 className="text-pink-800 font-bold">✨ MÓN ĂN NỔI BẬT ✨</h2>
             <p className="text-pink-600">Khám phá những món ăn đặc trưng của Việt Nam</p>
           </div>
 
@@ -119,9 +122,9 @@ export function HomePage({ onNavigateToRestaurants }: HomePageProps) {
                     className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                   />
                 </div>
-                <div className="p-5 space-y-2">
+                <div className="p-5 space-y-2 pt-2">
                   <h3 className="text-pink-800">{dish.name}</h3>
-                  <p className="text-gray-600 text-sm">{dish.description}</p>
+                  <p className="text-gray-700 text-sm text-ju">{dish.description}</p>
                 </div>
               </Card>
             ))}
@@ -131,7 +134,7 @@ export function HomePage({ onNavigateToRestaurants }: HomePageProps) {
         {/* Features */}
         <div className="space-y-6">
           <div className="text-center">
-            <h2 className="text-pink-800 mb-2">🌟 Tính năng nổi bật 🌟</h2>
+            <h2 className="text-pink-800 font-bold">🌟 TÍNH NĂNG NỔI BẬT 🌟</h2>
             <p className="text-pink-600">Trải nghiệm đặt bàn nhà hàng hiện đại và tiện lợi</p>
           </div>
 
@@ -150,7 +153,7 @@ export function HomePage({ onNavigateToRestaurants }: HomePageProps) {
                     <feature.icon className="h-7 w-7 text-white" />
                   </div>
                   <h3 className="text-pink-800">{feature.title}</h3>
-                  <p className="text-gray-600 text-sm">{feature.description}</p>
+                  <p className="text-gray-700 text-sm text-ju">{feature.description}</p>
                 </div>
               </Card>
             ))}
@@ -163,17 +166,16 @@ export function HomePage({ onNavigateToRestaurants }: HomePageProps) {
           style={{ boxShadow: "0 0 40px rgba(255,182,193,0.5)" }}
         >
           <div className="space-y-4">
-            <h2 className="text-white">Sẵn sàng khám phá ẩm thực Việt Nam?</h2>
-            <p className="text-white/90 max-w-2xl mx-auto">
-              Hãy bắt đầu hành trình ẩm thực của bạn ngay hôm nay. 
-              Tìm nhà hàng yêu thích và đặt bàn chỉ trong vài phút!
+            <h2 className="text-white font-bold">ĐỪNG ĐỂ CÂU HỎI "HÔM NAY ĂN GÌ" LÀM KHÓ BẠN</h2>
+            <p className="text-white/90 font-bold max-w-2xl mx-auto">
+              Chấm dứt hàng giờ lướt web vô định. Hãy để trợ lý AI thấu hiểu khẩu vị và đưa bạn đến bàn tiệc hoàn hảo chỉ trong 30 giây.
             </p>
             <Button
               onClick={onNavigateToRestaurants}
-              className="bg-white text-pink-600 hover:bg-pink-50 rounded-2xl px-8 py-6 shadow-xl"
+              className= "bg-white/80 backdrop-blur-lg border-2 border-pink-300 hover:bg-pink-100 text-pink-700 rounded-2xl px-8 py-6 shadow-lg font-bold"
             >
-              <Search className="mr-2 h-5 w-5" />
-              Bắt đầu ngay
+              <Search className="h-5 w-5" />
+              TÌM QUÁN NGAY
             </Button>
           </div>
         </Card>

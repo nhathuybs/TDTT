@@ -1,4 +1,5 @@
 import { API_URL } from "./config";
+import { getAuthHeaders } from "./auth";
 
 // Types matching backend API response
 export interface ApiRestaurant {
@@ -20,6 +21,17 @@ export interface ApiRestaurant {
   images?: string[];
   is_open?: boolean;
   specialty?: string[];
+  menu?: ApiMenuItem[];
+}
+
+export interface ApiMenuItem {
+  id: string;
+  restaurant_id?: string;
+  name: string;
+  description?: string | null;
+  price: number;
+  image?: string | null;
+  category: string;
 }
 
 export interface ApiReview {
@@ -34,9 +46,16 @@ export interface ApiReview {
   content?: string;
   images?: string[];
   likes?: number;
+  sentiment_score?: number | null;
+  sentiment_polarity?: number | null;
+  sentiment_subjectivity?: number | null;
   is_verified?: boolean;
   visit_date?: string;
-  reply?: string | null;
+  reply?: {
+    content: string;
+    created_at?: string | null;
+    restaurant_name?: string | null;
+  } | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -59,6 +78,15 @@ export interface ApiResponse<T> {
   };
 }
 
+export interface SitePage {
+  slug: string;
+  title: string;
+  body: string;
+  updated_by?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // Frontend types (matching App.tsx interface)
 export interface MenuItem {
   id: string;
@@ -73,6 +101,7 @@ export interface Restaurant {
   id: string;
   name: string;
   image: string;
+  images: string[];
   cuisine: string;
   rating: number;
   reviewCount: number;
@@ -88,21 +117,46 @@ export interface Restaurant {
 
 // Convert API restaurant to frontend Restaurant format
 export function mapApiRestaurantToFrontend(apiRestaurant: ApiRestaurant): Restaurant {
+  const mergedImages = Array.from(
+    new Set(
+      [apiRestaurant.image, ...(apiRestaurant.images || [])].filter(
+        (u): u is string => Boolean(u && typeof u === "string"),
+      ),
+    ),
+  );
+
+  const primaryImage = mergedImages[0] || "";
+
+  const menu: MenuItem[] = Array.isArray(apiRestaurant.menu)
+    ? apiRestaurant.menu.map((item) => ({
+        id: item.id,
+        name: item.name,
+        description: item.description || "",
+        price: typeof item.price === "number" ? item.price : Number(item.price) || 0,
+        image: item.image || "",
+        category: item.category || "Khác",
+      }))
+    : [];
+
   return {
     id: apiRestaurant.id,
     name: apiRestaurant.name,
-    image: apiRestaurant.image || apiRestaurant.images?.[0] || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800',
+    image: primaryImage,
+    images: mergedImages.length ? mergedImages : [primaryImage],
     cuisine: apiRestaurant.cuisine || 'Ẩm thực Việt Nam',
     rating: apiRestaurant.rating || 4.0,
     reviewCount: apiRestaurant.review_count || 0,
     priceLevel: apiRestaurant.price_level || 2,
-    distance: apiRestaurant.distance ? `${apiRestaurant.distance} km` : '0.5 km',
+    distance:
+      apiRestaurant.distance !== null && apiRestaurant.distance !== undefined
+        ? `${apiRestaurant.distance} km`
+        : "Chưa xác định",
     openTime: formatOpenTime(apiRestaurant.open_time, apiRestaurant.close_time),
     specialty: apiRestaurant.specialty || [],
     description: apiRestaurant.description || '',
     address: apiRestaurant.address || '',
     phone: apiRestaurant.phone || '',
-    menu: [], // Menu items loaded separately if needed
+    menu,
   };
 }
 
@@ -132,6 +186,29 @@ export async function fetchRestaurants(limit: number = 100, page: number = 1): P
     console.error('Error fetching restaurants:', error);
     return [];
   }
+}
+
+export async function fetchAllRestaurants(limit: number = 100): Promise<Restaurant[]> {
+  const collected: Restaurant[] = [];
+  let page = 1;
+  for (let i = 0; i < 1000; i += 1) {
+    const response = await fetch(`${API_URL}/restaurants?limit=${limit}&page=${page}`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result: ApiResponse<ApiRestaurant[]> = await response.json();
+    if (!(result.success && Array.isArray(result.data))) break;
+    collected.push(...result.data.map(mapApiRestaurantToFrontend));
+
+    const pagination = result.meta?.pagination;
+    if (!pagination?.has_next) break;
+    page += 1;
+  }
+
+  const deduped = new Map<string, Restaurant>();
+  for (const item of collected) deduped.set(item.id, item);
+  return Array.from(deduped.values());
 }
 
 export async function fetchRestaurantById(id: string): Promise<Restaurant | null> {
@@ -172,7 +249,7 @@ export async function getNewestRestaurants(): Promise<Restaurant[]> {
 
 export async function fetchRestaurantReviews(restaurantId: string): Promise<ApiReview[]> {
   try {
-    const response = await fetch(`${API_URL}/reviews/restaurant/${restaurantId}`);
+    const response = await fetch(`${API_URL}/reviews/restaurant/${restaurantId}?limit=100&page=1`);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -186,6 +263,114 @@ export async function fetchRestaurantReviews(restaurantId: string): Promise<ApiR
     console.error('Error fetching reviews:', error);
     return [];
   }
+}
+
+export interface CreateReviewPayload {
+  restaurant_id: string;
+  rating: number;
+  title?: string;
+  content: string;
+  images?: string[];
+  visit_date?: string;
+}
+
+export async function createReview(payload: CreateReviewPayload): Promise<ApiReview> {
+  const response = await fetch(`${API_URL}/reviews`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+    body: JSON.stringify(payload),
+  });
+
+  let result: ApiResponse<ApiReview> | null = null;
+  try {
+    result = (await response.json()) as ApiResponse<ApiReview>;
+  } catch {
+    // ignore
+  }
+
+  if (!response.ok) {
+    const message = result?.message || result?.error || `HTTP error! status: ${response.status}`;
+    throw new Error(message);
+  }
+
+  if (!result?.success || !result.data) {
+    throw new Error(result?.message || "Gửi đánh giá thất bại");
+  }
+
+  return result.data;
+}
+
+export interface UpdateReviewPayload {
+  rating?: number;
+  title?: string | null;
+  content?: string;
+  images?: string[] | null;
+}
+
+export async function updateReview(reviewId: string, payload: UpdateReviewPayload): Promise<ApiReview> {
+  const response = await fetch(`${API_URL}/reviews/${encodeURIComponent(reviewId)}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+    body: JSON.stringify(payload),
+  });
+
+  let result: ApiResponse<ApiReview> | null = null;
+  try {
+    result = (await response.json()) as ApiResponse<ApiReview>;
+  } catch {
+    // ignore
+  }
+
+  if (!response.ok) {
+    const message = result?.message || result?.error || `HTTP error! status: ${response.status}`;
+    throw new Error(message);
+  }
+
+  if (!result?.success || !result.data) {
+    throw new Error(result?.message || "Cập nhật đánh giá thất bại");
+  }
+
+  return result.data;
+}
+
+export async function deleteReview(reviewId: string): Promise<void> {
+  const response = await fetch(`${API_URL}/reviews/${encodeURIComponent(reviewId)}`, {
+    method: "DELETE",
+    headers: { ...getAuthHeaders() },
+  });
+
+  let result: ApiResponse<unknown> | null = null;
+  try {
+    result = (await response.json()) as ApiResponse<unknown>;
+  } catch {
+    // ignore
+  }
+
+  if (!response.ok) {
+    const message = result?.message || result?.error || `HTTP error! status: ${response.status}`;
+    throw new Error(message);
+  }
+
+  if (!result?.success) {
+    throw new Error(result?.message || "Xóa đánh giá thất bại");
+  }
+}
+
+export async function fetchMyReviewForRestaurant(restaurantId: string): Promise<ApiReview | null> {
+  const response = await fetch(`${API_URL}/reviews/restaurant/${encodeURIComponent(restaurantId)}/mine`, {
+    headers: { ...getAuthHeaders() },
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
+  const result: ApiResponse<ApiReview | null> = await response.json();
+  if (!result.success) {
+    throw new Error(result.message || "Không lấy được đánh giá của bạn");
+  }
+
+  return result.data || null;
 }
 
 export async function searchRestaurants(query: string): Promise<Restaurant[]> {
@@ -204,4 +389,63 @@ export async function searchRestaurants(query: string): Promise<Restaurant[]> {
     console.error('Error searching restaurants:', error);
     return [];
   }
+}
+
+export async function fetchSitePage(slug: string): Promise<SitePage | null> {
+  try {
+    const response = await fetch(`${API_URL}/pages/${encodeURIComponent(slug)}`);
+    if (!response.ok) return null;
+
+    const result: ApiResponse<SitePage> = await response.json();
+    if (result.success && result.data) return result.data;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export interface ChatRecommendationRestaurant {
+  id: string;
+  name: string;
+  cuisine?: string;
+  address?: string;
+  rating?: number;
+  review_count?: number;
+  price_level?: number;
+  image?: string;
+  google_maps_url?: string;
+}
+
+export interface ChatRecommendationResult {
+  reply: string;
+  restaurants: ChatRecommendationRestaurant[];
+  query?: string;
+}
+
+export async function recommendRestaurantsForChat(
+  message: string,
+  limit: number = 6,
+): Promise<ChatRecommendationResult> {
+  const response = await fetch(`${API_URL}/chat/recommend`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message, limit }),
+  });
+
+  let result: ApiResponse<ChatRecommendationResult> | null = null;
+  try {
+    result = (await response.json()) as ApiResponse<ChatRecommendationResult>;
+  } catch {
+    // ignore
+  }
+
+  if (!response.ok || !result?.success || !result.data) {
+    const msg =
+      result?.message ||
+      (result as any)?.error?.message ||
+      `HTTP error! status: ${response.status}`;
+    throw new Error(msg);
+  }
+
+  return result.data;
 }

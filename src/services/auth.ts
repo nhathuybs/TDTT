@@ -23,7 +23,7 @@ export interface LoginResponse {
   expires_in: number;
 }
 
-function getAuthHeaders() {
+export function getAuthHeaders() {
   const stored = localStorage.getItem("auth");
   if (!stored) return {};
   try {
@@ -53,7 +53,8 @@ async function handleResponse<T>(res: Response): Promise<T> {
 
   if (!res.ok) {
     const msg = await parseErr();
-    throw new Error(msg || `Request failed (${res.status})`);
+    const base = msg || res.statusText || "Request failed";
+    throw new Error(`${base} (${res.status})`);
   }
 
   const json = await res.json();
@@ -117,11 +118,23 @@ export async function getProfile(): Promise<AuthUser> {
   return handleResponse<AuthUser>(res);
 }
 
-export async function updateProfile(payload: { name?: string; phone?: string; avatar?: string; theme?: string }): Promise<AuthUser> {
+export async function updateProfile(payload: { name?: string | null; phone?: string | null; avatar?: string | null; theme?: string | null }): Promise<AuthUser> {
   const res = await fetch(`${API_URL}/users/profile`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
     body: JSON.stringify(payload),
+  });
+  return handleResponse<AuthUser>(res);
+}
+
+export async function uploadAvatar(file: File): Promise<AuthUser> {
+  const form = new FormData();
+  form.append("file", file);
+
+  const res = await fetch(`${API_URL}/users/avatar`, {
+    method: "POST",
+    headers: { ...getAuthHeaders() },
+    body: form,
   });
   return handleResponse<AuthUser>(res);
 }
@@ -133,4 +146,70 @@ export async function changePassword(payload: { current_password: string; new_pa
     body: JSON.stringify(payload),
   });
   return handleResponse<{ message: string }>(res);
+}
+
+export async function refreshSession(refresh_token: string | null | undefined): Promise<AuthTokens> {
+  const res = await fetch(`${API_URL}/auth/refresh`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ refresh_token }),
+  });
+  return handleResponse<AuthTokens>(res);
+}
+
+export interface UserAddress {
+  id: string;
+  label?: string | null;
+  line1?: string | null;
+  line2?: string | null;
+  city?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  is_default?: boolean | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface AddressUpsert {
+  label?: string | null;
+  line1?: string | null;
+  line2?: string | null;
+  city?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  is_default?: boolean | null;
+}
+
+export async function listAddresses(): Promise<UserAddress[]> {
+  const res = await fetch(`${API_URL}/users/addresses`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+  });
+  return handleResponse<UserAddress[]>(res);
+}
+
+export async function createAddress(payload: AddressUpsert): Promise<UserAddress> {
+  const res = await fetch(`${API_URL}/users/addresses`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+    body: JSON.stringify(payload),
+  });
+  return handleResponse<UserAddress>(res);
+}
+
+export async function updateAddress(addressId: string, payload: AddressUpsert): Promise<UserAddress> {
+  const res = await fetch(`${API_URL}/users/addresses/${encodeURIComponent(addressId)}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+    body: JSON.stringify(payload),
+  });
+  return handleResponse<UserAddress>(res);
+}
+
+export async function deleteAddress(addressId: string): Promise<void> {
+  const res = await fetch(`${API_URL}/users/addresses/${encodeURIComponent(addressId)}`, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+  });
+  await handleResponse<unknown>(res);
 }

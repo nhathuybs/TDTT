@@ -6,13 +6,13 @@ import {
   HomePage,
   RestaurantList,
   RestaurantDetail,
-  BookingsPage,
   MenuPage,
   AboutPage,
   ContactPage,
-  ReviewsPage,
   PolicyPage,
-  ThankYouPage,
+  ProfilePage,
+  SettingsPage,
+  PremiumPage,
   ChatSidebar,
   ChatMessage,
   ChatInput,
@@ -29,16 +29,18 @@ import { Navigation } from "./components/Navigation";
 import { ScrollArea } from "./components/ui/scroll-area";
 import { Button } from "./components/ui/button";
 import { Toaster } from "./components/ui/sonner";
-import { UtensilsCrossed, LogIn } from "lucide-react";
+import { UtensilsCrossed } from "lucide-react";
 
 // Services & Context
-import { fetchRestaurants, fetchRestaurantById, Restaurant as ApiRestaurant } from "./services/api";
+import { fetchAllRestaurants, fetchRestaurantById, recommendRestaurantsForChat, Restaurant as ApiRestaurant } from "./services/api";
+import type { LoginResponse } from "./services/auth";
 import { SidebarProvider, useSidebar } from "./context/SidebarContext";
 
 interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
+  recommendations?: ChatRecommendationRestaurant[];
 }
 
 interface Chat {
@@ -48,10 +50,25 @@ interface Chat {
   messages: Message[];
 }
 
+interface ChatRecommendationRestaurant {
+  id: string;
+  name: string;
+  cuisine?: string;
+  address?: string;
+  rating?: number;
+  reviewCount?: number;
+  priceLevel?: number;
+  image?: string;
+  googleMapsUrl?: string;
+}
+
 interface User {
   email: string;
   name: string;
+  avatar?: string | null;
 }
+
+const AUTH_STORAGE_KEY = "auth";
 
 // Use Restaurant type from API service
 type Restaurant = ApiRestaurant;
@@ -91,7 +108,7 @@ function RestaurantDetailPage() {
   
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center h-app">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500"></div>
       </div>
     );
@@ -99,7 +116,7 @@ function RestaurantDetailPage() {
   
   if (!restaurant) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen">
+      <div className="flex flex-col items-center justify-center h-app">
         <p className="text-pink-600 mb-4">Không tìm thấy nhà hàng</p>
         <Button onClick={() => navigate('/restaurants')}>Quay lại danh sách</Button>
       </div>
@@ -119,7 +136,7 @@ function RestaurantListPage() {
     const loadRestaurants = async () => {
       setIsLoading(true);
       try {
-        const data = await fetchRestaurants(100, 1);
+        const data = await fetchAllRestaurants(100);
         setRestaurants(data);
       } catch (error) {
         console.error('Failed to fetch restaurants:', error);
@@ -140,17 +157,10 @@ function RestaurantListPage() {
 // Home Page Wrapper
 function HomePageWrapper() {
   const navigate = useNavigate();
-  return <HomePage onNavigateToRestaurants={() => navigate('/restaurants')} />;
-}
-
-// Thank You Page Wrapper
-function ThankYouPageWrapper() {
-  const navigate = useNavigate();
   return (
-    <ThankYouPage
-      onNavigateHome={() => navigate('/')}
-      onNavigateBookings={() => navigate('/bookings')}
-      onNavigateChatbot={() => navigate('/chatbot')}
+    <HomePage
+      onNavigateToRestaurants={() => navigate("/restaurants")}
+      onNavigateToChatbot={() => navigate("/chatbot")}
     />
   );
 }
@@ -229,26 +239,56 @@ function ChatbotPage() {
     );
 
     setIsGenerating(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      const data = await recommendRestaurantsForChat(content, 6);
+      const recommendations: ChatRecommendationRestaurant[] = (data.restaurants || []).map((r) => ({
+        id: r.id,
+        name: r.name,
+        cuisine: r.cuisine,
+        address: r.address,
+        rating: r.rating,
+        reviewCount: r.review_count,
+        priceLevel: r.price_level,
+        image: r.image,
+        googleMapsUrl: r.google_maps_url,
+      }));
 
-    const assistantMessage: Message = {
-      id: generateId(),
-      role: "assistant",
-      content: travelFoodResponses[Math.floor(Math.random() * travelFoodResponses.length)],
-    };
+      const assistantMessage: Message = {
+        id: generateId(),
+        role: "assistant",
+        content: data.reply,
+        recommendations,
+      };
 
-    setChats((prev) =>
-      prev.map((chat) =>
-        chat.id === currentChatId
-          ? { ...chat, messages: [...chat.messages, assistantMessage] }
-          : chat
-      )
-    );
-    setIsGenerating(false);
+      setChats((prev) =>
+        prev.map((chat) =>
+          chat.id === currentChatId
+            ? { ...chat, messages: [...chat.messages, assistantMessage] }
+            : chat,
+        ),
+      );
+    } catch (err: any) {
+      const assistantMessage: Message = {
+        id: generateId(),
+        role: "assistant",
+        content:
+          err?.message ||
+          "Xin lỗi, mình đang gặp lỗi khi gợi ý nhà hàng. Bạn thử lại giúp mình nhé.",
+      };
+      setChats((prev) =>
+        prev.map((chat) =>
+          chat.id === currentChatId
+            ? { ...chat, messages: [...chat.messages, assistantMessage] }
+            : chat,
+        ),
+      );
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (
-    <div className="flex h-full w-full">
+    <div className="flex h-screen w-full">
       {/* Chat History Sidebar - synced with Navigation */}
       <ChatSidebar
         chats={chats}
@@ -259,7 +299,7 @@ function ChatbotPage() {
       />
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col min-w-0 relative">
+      <div className="flex-1 flex flex-col min-w-0 relative h-screen">
         {currentChat ? (
           <>
             <ScrollArea className="flex-1" ref={scrollAreaRef}>
@@ -281,7 +321,7 @@ function ChatbotPage() {
                       <h1 className="bg-gradient-to-r from-pink-600 via-rose-600 to-fuchsia-600 bg-clip-text text-transparent drop-shadow-[0_2px_8px_rgba(255,182,193,0.4)]">
                         🍜 Trợ Lý Ẩm Thực AI 🥢
                       </h1>
-                      <p className="text-pink-700 drop-shadow-[0_1px_4px_rgba(255,182,193,0.3)]">
+                      <p className="text-pink-700 text-lg max-w-3xl mx-auto">
                         ✨ Hỏi tôi về món ăn Việt Nam và nhận gợi ý nhà hàng tuyệt vời! ✨
                       </p>
                     </div>
@@ -290,7 +330,12 @@ function ChatbotPage() {
                 ) : (
                   <div>
                     {currentChat.messages.map((message) => (
-                      <ChatMessage key={message.id} role={message.role} content={message.content} />
+                      <ChatMessage
+                        key={message.id}
+                        role={message.role}
+                        content={message.content}
+                        recommendations={message.recommendations}
+                      />
                     ))}
                     {isGenerating && (
                       <div
@@ -346,51 +391,86 @@ function AppContent() {
   const location = useLocation();
   const { isCollapsed } = useSidebar();
 
-  const handleLogin = (email: string, name: string) => {
-    setUser({ email, name });
+  useEffect(() => {
+    const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+    if (!stored) return;
+    try {
+      const parsed = JSON.parse(stored) as { user?: { email?: string; name?: string; avatar?: string | null } } | null;
+      const email = parsed?.user?.email;
+      const name = parsed?.user?.name;
+      if (email && name) {
+        setUser({ email, name, avatar: parsed?.user?.avatar ?? null });
+      }
+    } catch {
+      localStorage.removeItem(AUTH_STORAGE_KEY);
+    }
+  }, []);
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent).detail as { user?: { email?: string; name?: string; avatar?: string | null } } | undefined;
+      const email = detail?.user?.email;
+      const name = detail?.user?.name;
+      if (email && name) {
+        setUser({ email, name, avatar: detail?.user?.avatar ?? null });
+      }
+    };
+
+    window.addEventListener("auth:updated", handler as EventListener);
+    return () => window.removeEventListener("auth:updated", handler as EventListener);
+  }, []);
+
+  useEffect(() => {
+    const handler = () => setAuthDialogOpen(true);
+    window.addEventListener("auth:open", handler);
+    return () => window.removeEventListener("auth:open", handler);
+  }, []);
+
+  const handleLogin = (payload: LoginResponse) => {
+    setUser({ email: payload.user.email, name: payload.user.name, avatar: payload.user.avatar ?? null });
+    localStorage.setItem(
+      AUTH_STORAGE_KEY,
+      JSON.stringify({
+        user: payload.user,
+        accessToken: payload.access_token,
+        refreshToken: payload.refresh_token,
+        expiresIn: payload.expires_in,
+      }),
+    );
   };
 
   const handleLogout = () => {
     setUser(null);
+    localStorage.removeItem(AUTH_STORAGE_KEY);
   };
 
   // Check if current page is chatbot
   const isChatbotPage = location.pathname === '/chatbot';
 
   return (
-    <div className="h-screen flex bg-gradient-to-br from-pink-100 via-purple-100 to-fuchsia-100 text-gray-800 relative overflow-hidden">
+    <div className="h-app flex bg-gradient-to-br from-pink-100 via-purple-100 to-fuchsia-100 text-gray-800 relative overflow-hidden">
       <Toaster position="top-center" />
       
       {/* Auth Dialog */}
       <AuthDialog open={authDialogOpen} onOpenChange={setAuthDialogOpen} onLogin={handleLogin} />
 
       {/* Navigation Sidebar */}
-      <Navigation />
-
-      {/* User Menu or Login Button */}
-      {user ? (
-        <UserMenu userName={user.name} userEmail={user.email} onLogout={handleLogout} />
-      ) : (
-        <Button
-          onClick={() => setAuthDialogOpen(true)}
-          className="fixed top-4 right-4 z-50 flex items-center gap-2 bg-gradient-to-br from-pink-400 to-rose-400 backdrop-blur-lg border-2 border-pink-200 shadow-xl hover:from-pink-300 hover:to-rose-300 rounded-2xl text-white"
-          style={{ boxShadow: "0 0 20px rgba(255,182,193,0.5)" }}
-        >
-          <LogIn className="h-4 w-4" />
-          <span className="hidden sm:inline">Đăng nhập</span>
-        </Button>
-      )}
+      <Navigation
+        user={user}
+        onLoginClick={() => setAuthDialogOpen(true)}
+        onLogout={handleLogout}
+      />
 
       {/* Pastel Pink Galaxy/Nebula Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-pink-200/60 via-purple-200/50 to-fuchsia-200/60" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-pink-300/40 via-transparent to-transparent" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-fuchsia-300/40 via-transparent to-transparent" />
+      <div className="fixed inset-0 bg-gradient-to-br from-pink-200/60 via-purple-200/50 to-fuchsia-200/60 pointer-events-none" />
+      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-pink-300/40 via-transparent to-transparent pointer-events-none" />
+      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-fuchsia-300/40 via-transparent to-transparent pointer-events-none" />
 
       {/* Twinkling Pink Stars */}
       {[...Array(50)].map((_, i) => (
         <div
           key={`star-${i}`}
-          className="star"
+          className="star fixed pointer-events-none"
           style={{
             width: Math.random() * 4 + 2 + "px",
             height: Math.random() * 4 + 2 + "px",
@@ -405,13 +485,13 @@ function AppContent() {
       ))}
 
       {/* Floating Food Emojis */}
-      <div className="food-emoji-float absolute top-10 left-20 text-6xl lg:left-72" style={{ animationDuration: "4s" }}>🍜</div>
-      <div className="food-emoji-float absolute top-40 right-32 text-5xl" style={{ animationDuration: "5s", animationDelay: "0.5s" }}>🥖</div>
-      <div className="food-emoji-float absolute bottom-20 left-40 text-5xl lg:left-80" style={{ animationDuration: "4.5s", animationDelay: "1s" }}>🌶️</div>
-      <div className="food-emoji-float absolute bottom-32 right-20 text-6xl" style={{ animationDuration: "5.5s", animationDelay: "1.5s" }}>🥢</div>
-      <div className="food-emoji-float absolute top-1/2 right-10 text-4xl" style={{ animationDuration: "4s", animationDelay: "2s" }}>🍲</div>
-      <div className="food-emoji-float absolute top-1/3 left-1/4 text-5xl" style={{ animationDuration: "4.8s", animationDelay: "0.8s" }}>☕</div>
-      <div className="food-emoji-float absolute bottom-1/4 right-1/3 text-4xl" style={{ animationDuration: "5.2s", animationDelay: "1.2s" }}>🥘</div>
+      <div className="food-emoji-float fixed top-10 left-20 text-6xl lg:left-72 pointer-events-none" style={{ animationDuration: "4s" }}>🍜</div>
+      <div className="food-emoji-float fixed top-40 right-32 text-5xl pointer-events-none" style={{ animationDuration: "5s", animationDelay: "0.5s" }}>🥖</div>
+      <div className="food-emoji-float fixed bottom-20 left-40 text-5xl lg:left-80 pointer-events-none" style={{ animationDuration: "4.5s", animationDelay: "1s" }}>🌶️</div>
+      <div className="food-emoji-float fixed bottom-32 right-20 text-6xl pointer-events-none" style={{ animationDuration: "5.5s", animationDelay: "1.5s" }}>🥢</div>
+      <div className="food-emoji-float fixed top-1/2 right-10 text-4xl pointer-events-none" style={{ animationDuration: "4s", animationDelay: "2s" }}>🍲</div>
+      <div className="food-emoji-float fixed top-1/3 left-1/4 text-5xl pointer-events-none" style={{ animationDuration: "4.8s", animationDelay: "0.8s" }}>☕</div>
+      <div className="food-emoji-float fixed bottom-1/4 right-1/3 text-4xl pointer-events-none" style={{ animationDuration: "5.2s", animationDelay: "1.2s" }}>🥘</div>
 
       {/* Main Content - with left margin for sidebar on desktop */}
       <div className={`flex-1 flex flex-col relative z-10 transition-all duration-300 ${isCollapsed ? "lg:ml-20" : "lg:ml-64"}`}>
@@ -419,14 +499,14 @@ function AppContent() {
           <Route path="/" element={<HomePageWrapper />} />
           <Route path="/restaurants" element={<RestaurantListPage />} />
           <Route path="/restaurants/:id" element={<RestaurantDetailPage />} />
-          <Route path="/bookings" element={<BookingsPage />} />
           <Route path="/menu" element={<MenuPage />} />
           <Route path="/chatbot" element={<ChatbotPage />} />
-          <Route path="/reviews" element={<ReviewsPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/policy" element={<PolicyPage />} />
-          <Route path="/thank-you" element={<ThankYouPageWrapper />} />
+          <Route path="/account/profile" element={<ProfilePage />} />
+          <Route path="/account/settings" element={<SettingsPage />} />
+          <Route path="/account/premium" element={<PremiumPage />} />
         </Routes>
       </div>
 

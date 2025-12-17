@@ -31,6 +31,7 @@ backend/smart_travel.db
 logs/
 backend/places_restaurants.json
 backend/places_photo_index.json
+backend/hcm_restaurants_with_local_images.json
 
 # Coverage / test artifacts
 coverage/
@@ -38,7 +39,10 @@ htmlcov/
 .mypy_cache/
 .pytest_cache/
 
+# Local backups
+src_backup_*/
+index_backup_*.html
+postcss.config_backup_*.js
+
 # Private / not published on GitHub
-backend/
 Data Restaurants/
-deploy-gcp.ps1

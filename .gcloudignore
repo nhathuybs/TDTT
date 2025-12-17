@@ -10,6 +10,11 @@ node_modules/
 dist/
 build/
 
+# Local backups
+src_backup_*/
+index_backup_*.html
+postcss.config_backup_*.js
+
 # Secrets
 .secrets/
 .env

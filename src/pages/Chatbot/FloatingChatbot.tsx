@@ -5,11 +5,14 @@ import { ScrollArea } from "../../components/ui/scroll-area";
 import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
 import { MessageCircle, X, Minimize2 } from "lucide-react";
+import { recommendRestaurantsForChat } from "../../services/api";
+import type { ChatRecommendationRestaurant } from "./ChatMessage";
 
 interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
+  recommendations?: ChatRecommendationRestaurant[];
 }
 
 const foodSuggestions = [
@@ -48,7 +51,7 @@ export function FloatingChatbot() {
     }
   }, [messages, isOpen]);
 
-  const handleSendMessage = async (content: string) => {
+const handleSendMessage = async (content: string) => {
     const userMessage: Message = {
       id: generateId(),
       role: "user",
@@ -57,17 +60,40 @@ export function FloatingChatbot() {
 
     setMessages((prev) => [...prev, userMessage]);
     setIsGenerating(true);
+    try {
+      const data = await recommendRestaurantsForChat(content, 6);
+      const recommendations: ChatRecommendationRestaurant[] = (data.restaurants || []).map((r) => ({
+        id: r.id,
+        name: r.name,
+        cuisine: r.cuisine,
+        address: r.address,
+        rating: r.rating,
+        reviewCount: r.review_count,
+        priceLevel: r.price_level,
+        image: r.image,
+        googleMapsUrl: r.google_maps_url,
+      }));
 
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+      const assistantMessage: Message = {
+        id: generateId(),
+        role: "assistant",
+        content: data.reply,
+        recommendations,
+      };
 
-    const assistantMessage: Message = {
-      id: generateId(),
-      role: "assistant",
-      content: chatbotResponses[Math.floor(Math.random() * chatbotResponses.length)],
-    };
-
-    setMessages((prev) => [...prev, assistantMessage]);
-    setIsGenerating(false);
+      setMessages((prev) => [...prev, assistantMessage]);
+    } catch (err: any) {
+      const assistantMessage: Message = {
+        id: generateId(),
+        role: "assistant",
+        content:
+          err?.message ||
+          chatbotResponses[Math.floor(Math.random() * chatbotResponses.length)],
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleSuggestionClick = (suggestion: string) => {
@@ -90,18 +116,18 @@ export function FloatingChatbot() {
 
   return (
     <Card
-      className={`fixed z-50 bg-gradient-to-br from-pink-50 via-rose-50 to-fuchsia-50 border-2 border-pink-200 shadow-2xl overflow-hidden transition-all duration-300 ${
+      className={`fixed bottom-3 right-3 z-50 bg-gradient-to-br from-pink-50 via-rose-50 to-fuchsia-50 border-2 border-pink-200 shadow-2xl overflow-hidden transition-all duration-300 text-center ${
         isMinimized ? "h-16" : "h-[500px] sm:h-[550px] md:h-[600px]"
-      } w-[calc(100vw-1.5rem)] sm:w-[360px] md:w-[400px] bottom-3 right-3 sm:bottom-6 sm:right-6 rounded-2xl sm:rounded-3xl`}
+      } w-[calc(100vw-1.5rem)] sm:w-[360px] md:w-[400px] rounded-2xl sm:rounded-3xl`}
       style={{
         boxShadow: "0 0 40px rgba(255,182,193,0.5), 0 20px 60px rgba(0,0,0,0.15)",
       }}
     >
       {/* Header */}
       <div className="flex items-center justify-between p-4 bg-gradient-to-r from-pink-400 to-rose-400 border-b-2 border-pink-300">
-        <div className="flex items-center gap-2">
-          <div className="h-3 w-3 bg-green-400 rounded-full animate-pulse" />
-          <span className="text-white">🤖 Trợ lý ẩm thực AI</span>
+        <div className="h-3 w-3 bg-green-400 rounded-full animate-pulse" />
+        <div className="flex-1 text-center">
+          <span className="text-white font-medium">🤖 TRỢ LÝ ẨM THỰC AI 🤖</span>
         </div>
         <div className="flex gap-2">
           <Button
@@ -129,8 +155,8 @@ export function FloatingChatbot() {
           <ScrollArea className="flex-1 p-3 sm:p-4" ref={scrollAreaRef}>
             {messages.length === 0 ? (
               <div className="space-y-4">
-                <div className="text-center space-y-2 mb-4">
-                  <p className="text-pink-700">
+                <div className="text-center">
+                  <p className="text-pink-600">
                     Xin chào! Tôi là trợ lý AI chuyên về ẩm thực Việt Nam. Tôi có thể giúp bạn tìm món ăn phù hợp!
                   </p>
                 </div>
@@ -151,7 +177,12 @@ export function FloatingChatbot() {
             ) : (
               <div className="space-y-4">
                 {messages.map((message) => (
-                  <ChatMessage key={message.id} role={message.role} content={message.content} />
+                  <ChatMessage
+                    key={message.id}
+                    role={message.role}
+                    content={message.content}
+                    recommendations={message.recommendations}
+                  />
                 ))}
                 {isGenerating && (
                   <div className="flex gap-2 p-3 bg-gradient-to-r from-pink-200/80 via-rose-200/80 to-fuchsia-200/80 backdrop-blur-md border-2 border-pink-300 rounded-2xl">

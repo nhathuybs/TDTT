@@ -7,15 +7,10 @@ export { HomePage } from "./Home";
 // Restaurants
 export { RestaurantList, RestaurantDetail, RestaurantCard } from "./Restaurants";
 
-// Bookings
-export { BookingsPage } from "./Bookings";
-
 // Menu
 export { MenuPage } from "./Menu";
 
 // Reviews
-export { ReviewsPage } from "./Reviews";
-
 // About
 export { AboutPage } from "./About";
 
@@ -28,6 +23,9 @@ export { PolicyPage } from "./Policy";
 // ThankYou
 export { ThankYouPage } from "./ThankYou";
 
+// Account
+export { ProfilePage, SettingsPage, PremiumPage } from "./Account";
+
 // Chatbot
 export { 
   ChatSidebar, 
@@ -36,4 +34,3 @@ export {
   PromptSuggestions, 
   FloatingChatbot 
 } from "./Chatbot";
-

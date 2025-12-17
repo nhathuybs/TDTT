@@ -1,15 +1,23 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { RestaurantCard } from "./RestaurantCard";
 import { Input } from "../../components/ui/input";
 import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+} from "../../components/ui/pagination";
 import { ScrollArea } from "../../components/ui/scroll-area";
-import { Search, Filter, X } from "lucide-react";
+import { Search, Filter, X, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface Restaurant {
   id: string;
   name: string;
   image: string;
+  images: string[];
   cuisine: string;
   rating: number;
   reviewCount: number;
@@ -53,6 +61,7 @@ export function RestaurantList({ restaurants, onSelectRestaurant, isLoading = fa
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCuisine, setSelectedCuisine] = useState("");
   const [selectedPrice, setSelectedPrice] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const filteredRestaurants = restaurants.filter((restaurant) => {
     const searchLower = searchQuery.toLowerCase();
@@ -69,12 +78,49 @@ export function RestaurantList({ restaurants, onSelectRestaurant, isLoading = fa
     return matchesSearch && matchesCuisine && matchesPrice;
   });
 
+  const pageSize = 24;
+  const totalPages = Math.max(1, Math.ceil(filteredRestaurants.length / pageSize));
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedCuisine, selectedPrice, restaurants.length]);
+
+  useEffect(() => {
+    setCurrentPage((p) => Math.min(Math.max(1, p), totalPages));
+  }, [totalPages]);
+
+  const pagedRestaurants = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredRestaurants.slice(start, start + pageSize);
+  }, [filteredRestaurants, currentPage]);
+
+  const pageItems = useMemo(() => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, idx) => idx + 1);
+    }
+
+    const siblings = 1;
+    const pages: Array<number | "ellipsis"> = [];
+    pages.push(1);
+
+    const start = Math.max(2, currentPage - siblings);
+    const end = Math.min(totalPages - 1, currentPage + siblings);
+
+    if (start > 2) pages.push("ellipsis");
+    for (let p = start; p <= end; p += 1) pages.push(p);
+    if (end < totalPages - 1) pages.push("ellipsis");
+
+    pages.push(totalPages);
+    return pages;
+  }, [currentPage, totalPages]);
+
   const hasActiveFilters = selectedCuisine !== "" || selectedPrice !== 0 || searchQuery !== "";
 
   const clearFilters = () => {
     setSelectedCuisine("");
     setSelectedPrice(0);
     setSearchQuery("");
+    setCurrentPage(1);
   };
 
   return (
@@ -86,8 +132,8 @@ export function RestaurantList({ restaurants, onSelectRestaurant, isLoading = fa
             <h1 className="bg-gradient-to-r from-pink-600 via-rose-600 to-fuchsia-600 bg-clip-text text-transparent drop-shadow-[0_2px_8px_rgba(255,182,193,0.4)]">
               🍜 Khám phá Ẩm thực Việt Nam 🥢
             </h1>
-            <p className="text-pink-700">
-              Tìm kiếm và đặt bàn tại các nhà hàng Việt Nam tốt nhất
+            <p className="text-pink-700 text-lg max-w-3xl mx-auto">
+              Trải nghiệm ẩm thực chuẩn "gu" với sự thấu hiểu từ Trí tuệ Nhân tạo và Dữ liệu xác thực.
             </p>
           </div>
 
@@ -111,19 +157,19 @@ export function RestaurantList({ restaurants, onSelectRestaurant, isLoading = fa
               className="bg-gradient-to-br from-pink-100/90 via-rose-100/90 to-fuchsia-100/90 backdrop-blur-xl border-2 border-pink-200 rounded-3xl p-4 shadow-lg"
               style={{ boxShadow: "0 0 25px rgba(255,182,193,0.3)" }}
             >
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2">
                   <Filter className="h-5 w-5 text-pink-600" />
-                  <span className="text-pink-800">Lọc theo</span>
+                  <span className="text-pink-800 font-bold">Lọc theo</span>
                 </div>
                 {hasActiveFilters && (
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={clearFilters}
-                    className="text-pink-600 hover:text-pink-700 hover:bg-pink-200/50"
+                    className="text-pink-600 hover:text-pink-700 hover:bg-pink-200/50 font-bold"
                   >
-                    <X className="h-4 w-4 mr-1" />
+                    <X className="h-4 w-4" />
                     Xóa bộ lọc
                   </Button>
                 )}
@@ -131,7 +177,7 @@ export function RestaurantList({ restaurants, onSelectRestaurant, isLoading = fa
 
               {/* Cuisine Filters */}
               <div className="space-y-2">
-                <p className="text-sm text-pink-700">Loại món ăn</p>
+                <p className="text-sm text-pink-700 font-bold">Loại món ăn</p>
                 <div className="flex flex-wrap gap-2">
                   {cuisineFilters.map((cuisine) => (
                     <Badge
@@ -155,8 +201,8 @@ export function RestaurantList({ restaurants, onSelectRestaurant, isLoading = fa
               </div>
 
               {/* Price Filters */}
-              <div className="space-y-2 mt-4">
-                <p className="text-sm text-pink-700">Mức giá</p>
+              <div className="space-y-2 mt-2">
+                <p className="text-sm text-pink-700 font-bold">Mức giá</p>
                 <div className="flex flex-wrap gap-2">
                   {priceFilters.map((price) => (
                     <Badge
@@ -182,7 +228,7 @@ export function RestaurantList({ restaurants, onSelectRestaurant, isLoading = fa
           </div>
 
           {/* Results Count */}
-          <div className="text-pink-700">
+          <div className="text-pink-700 font-bold">
             {isLoading ? "Đang tải..." : <>Tìm thấy <span>{filteredRestaurants.length}</span> nhà hàng</>}
           </div>
 
@@ -190,7 +236,7 @@ export function RestaurantList({ restaurants, onSelectRestaurant, isLoading = fa
           {isLoading ? (
             <div className="text-center py-12">
               <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-pink-300 border-t-pink-600"></div>
-              <p className="text-pink-600 text-lg mt-4">Đang tải danh sách nhà hàng...</p>
+              <p className="text-pink-600 text-lg mt-4 font-bold">Đang tải danh sách nhà hàng...</p>
             </div>
           ) : filteredRestaurants.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-6">
@@ -204,8 +250,8 @@ export function RestaurantList({ restaurants, onSelectRestaurant, isLoading = fa
             </div>
           ) : (
             <div className="text-center py-12">
-              <p className="text-pink-600 text-lg">Không tìm thấy nhà hàng phù hợp</p>
-              <p className="text-pink-500 mt-2">Thử điều chỉnh bộ lọc của bạn</p>
+              <p className="text-pink-600 text-lg font-bold">Không tìm thấy nhà hàng phù hợp</p>
+              <p className="text-pink-500 font-bold">Thử điều chỉnh bộ lọc của bạn</p>
             </div>
           )}
         </div>
@@ -213,3 +259,4 @@ export function RestaurantList({ restaurants, onSelectRestaurant, isLoading = fa
     </div>
   );
 }
+

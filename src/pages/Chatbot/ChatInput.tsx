@@ -36,7 +36,7 @@ export function ChatInput({ onSendMessage, disabled }: ChatInputProps) {
 
   return (
     <div 
-      className="border-t-2 border-pink-300 bg-gradient-to-r from-pink-100/90 via-purple-100/90 to-fuchsia-100/90 backdrop-blur-xl p-4 shadow-2xl"
+      className="border-t-2 border-pink-300 bg-gradient-to-r from-pink-100/90 via-purple-100/90 to-fuchsia-100/90 backdrop-blur-xl p-4 pb-safe-4 shadow-2xl"
       style={{ boxShadow: '0 -10px 30px rgba(255,182,193,0.3)' }}
     >
       <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
@@ -48,7 +48,7 @@ export function ChatInput({ onSendMessage, disabled }: ChatInputProps) {
             onKeyDown={handleKeyDown}
             placeholder="Hỏi về ẩm thực Việt Nam... 🍜"
             disabled={disabled}
-            className="min-h-[48px] sm:min-h-[52px] max-h-[150px] sm:max-h-[200px] resize-none bg-white/80 border-2 border-pink-300 text-gray-800 placeholder:text-pink-400/70 placeholder:text-center pr-12 focus:border-pink-400 focus:ring-2 focus:ring-pink-300 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-xl text-sm sm:text-base flex items-center"
+            className="min-h-[48px] sm:min-h-[52px] max-h-[150px] sm:max-h-[200px] resize-none bg-white/80 border-2 border-pink-300 text-gray-700 placeholder:text-pink-600 placeholder:text-center pr-12 focus:border-pink-400 focus:ring-2 focus:ring-pink-300 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-xl text-sm sm:text-base flex items-center"
             style={{ boxShadow: '0 0 20px rgba(255,182,193,0.3), inset 0 0 15px rgba(255,255,255,0.5)', paddingTop: '12px' }}
             rows={1}
           />
