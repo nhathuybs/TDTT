@@ -1,11 +1,8 @@
-# 🍜 Smart Travel System
+# Smart Travel System
 
 A modern restaurant booking and food discovery platform built with React, TypeScript, and FastAPI.
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
-![License](https://img.shields.io/badge/license-MIT-green.svg)
-
-## 🌟 Features
+## Features
 
 - **Restaurant Discovery**: Browse and search restaurants with filters
 - **Online Booking**: Book tables with real-time availability
@@ -14,7 +11,7 @@ A modern restaurant booking and food discovery platform built with React, TypeSc
 - **User Authentication**: Secure login with OTP verification
 - **Responsive Design**: Works on desktop and mobile
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 Smart-Travel-System/
@@ -35,7 +32,7 @@ Smart-Travel-System/
 └── plans/                  # Architecture documentation
 ```
 
-## 🚀 Tech Stack
+## Tech Stack
 
 ### Frontend
 - **React 18** - UI library
@@ -59,7 +56,7 @@ Smart-Travel-System/
 - **Cloud SQL** - Managed PostgreSQL
 - **Cloud Storage** - Image storage
 
-## 📦 Installation
+## Installation
 
 ### Prerequisites
 - Node.js 18+
@@ -94,7 +91,7 @@ pip install -r requirements.txt
 python main.py
 ```
 
-## 🔧 Configuration
+## Configuration
 
 ### Frontend Environment Variables
 
@@ -146,7 +143,7 @@ OTP_RESEND_LIMIT_PER_HOUR=5
 CORS_ORIGINS=http://localhost:3000,http://localhost:5173
 ```
 
-## 🧪 Testing
+## Testing
 
 ### Backend Tests
 
@@ -178,13 +175,13 @@ npm run test:ui
 npm run test:coverage
 ```
 
-## 📚 API Documentation
+## API Documentation
 
 - **Swagger UI**: http://localhost:8000/docs
 - **ReDoc**: http://localhost:8000/redoc
 - **API Guide**: [backend/docs/API.md](New_Frontend/backend/docs/API.md)
 
-## 🔐 Security Features
+## Security Features
 
 - JWT authentication with access/refresh tokens
 - OTP-based email verification
@@ -194,7 +191,7 @@ npm run test:coverage
 - CORS configuration
 - Input validation with Pydantic
 
-## 📁 Project Structure
+## Project Structure
 
 ### Frontend Components
 
@@ -252,7 +249,7 @@ app/
     └── email_service.py
 ```
 
-## 🚢 Deployment
+## Deployment
 
 ### Docker Build
 
@@ -317,13 +314,13 @@ Notes:
 - Cloud SQL: supply `_CLOUD_SQL_CONNECTION` (format `project:region:instance`) and `DATABASE_URL` using the `/cloudsql/` host socket for asyncpg.
 - Artifacts are pushed to `${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/backend:latest` and `/frontend:latest`.
 
-## 📈 Performance
+## Performance
 
 - **Frontend**: Vite for fast HMR, React Query for caching
 - **Backend**: Async SQLAlchemy, in-memory caching
 - **Database**: Connection pooling, indexed queries
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -331,15 +328,15 @@ Notes:
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 👥 Authors
+## Authors
 
 - **Smart Travel Team** - *Initial work*
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - [shadcn/ui](https://ui.shadcn.com/) for the beautiful components
 - [FastAPI](https://fastapi.tiangolo.com/) for the amazing framework
